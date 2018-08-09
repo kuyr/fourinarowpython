@@ -25,14 +25,14 @@ TEXTCOLOR = WHITE
 RED = 'red'
 BLACK = 'black'
 EMPTY = None
-HUMAN1 = 'human1'
-HUMAN2 = 'human2'
+HUMAN_ONE = 'human_one'
+HUMAN_TWO = 'human_two'
 
 
 def main():
     global FPSCLOCK, DISPLAYSURF, REDPILERECT, BLACKPILERECT, REDTOKENIMG
-    global BLACKTOKENIMG, BOARDIMG, ARROWIMG, ARROWRECT, HUMAN1WINNERIMG
-    global HUMAN2WINNERIMG, WINNERRECT, TIEWINNERIMG
+    global BLACKTOKENIMG, BOARDIMG, ARROWIMG, ARROWRECT_ONE,ARROWRECT_TWO, HUMAN_ONEWINNERIMG
+    global HUMAN_TWOWINNERIMG, WINNERRECT, TIEWINNERIMG
 
     pygame.init()
     FPSCLOCK = pygame.time.Clock()
@@ -48,16 +48,19 @@ def main():
     BOARDIMG = pygame.image.load('4row_board.png')
     BOARDIMG = pygame.transform.smoothscale(BOARDIMG, (SPACESIZE, SPACESIZE))
 
-    HUMAN1WINNERIMG = pygame.image.load('4row_human1winner.png')
-    HUMAN2WINNERIMG = pygame.image.load('4row_human2winner.png')
+    HUMAN_ONEWINNERIMG = pygame.image.load('pone.png')
+    HUMAN_TWOWINNERIMG = pygame.image.load('p2.png')
     TIEWINNERIMG = pygame.image.load('4row_tie.png')
-    WINNERRECT = HUMAN1WINNERIMG.get_rect()
+    WINNERRECT = HUMAN_ONEWINNERIMG.get_rect()
     WINNERRECT.center = (int(WINDOWWIDTH / 2), int(WINDOWHEIGHT / 2))
 
     ARROWIMG = pygame.image.load('4row_arrow.png')
-    ARROWRECT = ARROWIMG.get_rect()
-    ARROWRECT.left = REDPILERECT.right + 10
-    ARROWRECT.centery = REDPILERECT.centery
+    ARROWRECT_ONE = ARROWIMG.get_rect()
+    ARROWRECT_TWO = ARROWIMG.get_rect()
+    ARROWRECT_ONE.left = REDPILERECT.right + 10
+    ARROWRECT_TWO.right = BLACKPILERECT.left + 10
+    ARROWRECT_ONE.centery = REDPILERECT.centery
+    ARROWRECT_TWO.centery = BLACKPILERECT.centery
 
     isFirstGame = True
 
@@ -68,41 +71,42 @@ def main():
 
 def runGame(isFirstGame):
     if isFirstGame:
-        # Let the human2 go first on the first game, so the player
+        # Let player two go first on the first game, so the player
         # can see how the tokens are dragged from the token piles.
-        turn = HUMAN2
+        turn = HUMAN_TWO
         showHelp = True
     else:
         # Randomly choose who goes first.
         if random.randint(0, 1) == 0:
-            turn = HUMAN2
+            turn = HUMAN_TWO
         else:
-            turn = HUMAN1
+            turn = HUMAN_ONE
         showHelp = False
 
     # Set up a blank board data structure.
     mainBoard = getNewBoard()
 
     while True: # main game loop
-        if turn == HUMAN1:
+        if turn == HUMAN_ONE:
             # Human player's turn.
-            getHumanMove(mainBoard, showHelp)
+            getHumanOneMove(mainBoard, showHelp)
             if showHelp:
                 # turn off help arrow after the first move
                 showHelp = False
             if isWinner(mainBoard, RED):
-                winnerImg = HUMAN1WINNERIMG
+                winnerImg = HUMAN_ONEWINNERIMG
                 break
-            turn = HUMAN2 # switch to other player's turn
-        else:
-            # Computer player's turn.
-            column = getHuman2Move(mainBoard)
-            animatehuman2Moving(mainBoard, column)
-            makeMove(mainBoard, BLACK, column)
+            turn = HUMAN_TWO # switch to other player's turn
+        elif turn == HUMAN_TWO:
+            # Player Two's turn.
+            getHumanTwoMove(mainBoard, showHelp)
+            if showHelp:
+                # turn off help arrow after the first move
+                showHelp = False
             if isWinner(mainBoard, BLACK):
-                winnerImg = HUMAN2WINNERIMG
+                winnerImg = HUMAN_TWOWINNERIMG
                 break
-            turn = HUMAN1 # switch to other player's turn
+            turn = HUMAN_ONE # switch to other player's turn
 
         if isBoardFull(mainBoard):
             # A completely filled board means it's a tie.
@@ -167,7 +171,7 @@ def getNewBoard():
     return board
 
 
-def getHumanMove(board, isFirstMove):
+def getHumanOneMove(board, isFirstMove):
     draggingToken = False
     tokenx, tokeny = None, None
     while True:
@@ -202,7 +206,7 @@ def getHumanMove(board, isFirstMove):
 
         if isFirstMove:
             # Show the help arrow for the player's first move.
-            DISPLAYSURF.blit(ARROWIMG, ARROWRECT)
+            DISPLAYSURF.blit(ARROWIMG, ARROWRECT_ONE)
 
         pygame.display.update()
         FPSCLOCK.tick()
@@ -225,8 +229,7 @@ def animateDroppingToken(board, column, color):
         FPSCLOCK.tick()
 
 
-
-def getHuman2Move(board, isFirstMove):
+def getHumanTwoMove(board, isFirstMove):
     draggingToken = False
     tokenx, tokeny = None, None
     while True:
@@ -234,7 +237,7 @@ def getHuman2Move(board, isFirstMove):
             if event.type == QUIT:
                 pygame.quit()
                 sys.exit()
-            elif event.type == MOUSEBUTTONDOWN and not draggingToken and REDPILERECT.collidepoint(event.pos):
+            elif event.type == MOUSEBUTTONDOWN and not draggingToken and BLACKPILERECT.collidepoint(event.pos):
                 # start of dragging on red token pile.
                 draggingToken = True
                 tokenx, tokeny = event.pos
@@ -247,104 +250,24 @@ def getHuman2Move(board, isFirstMove):
                     # let go at the top of the screen.
                     column = int((tokenx - XMARGIN) / SPACESIZE)
                     if isValidMove(board, column):
-                        animateDroppingToken(board, column, RED)
-                        board[column][getLowestEmptySpace(board, column)] = RED
+                        animateDroppingToken(board, column, BLACK)
+                        board[column][getLowestEmptySpace(board, column)] = BLACK
                         drawBoard(board)
                         pygame.display.update()
                         return
                 tokenx, tokeny = None, None
                 draggingToken = False
         if tokenx != None and tokeny != None:
-            drawBoard(board, {'x':tokenx - int(SPACESIZE / 2), 'y':tokeny - int(SPACESIZE / 2), 'color':RED})
+            drawBoard(board, {'x':tokenx - int(SPACESIZE / 2), 'y':tokeny - int(SPACESIZE / 2), 'color':BLACK})
         else:
             drawBoard(board)
 
         if isFirstMove:
             # Show the help arrow for the player's first move.
-            DISPLAYSURF.blit(ARROWIMG, ARROWRECT)
+            DISPLAYSURF.blit(ARROWIMG, ARROWRECT_TWO)
 
         pygame.display.update()
         FPSCLOCK.tick()
-
-
-def animatehuman2Moving(board, column):
-    x = BLACKPILERECT.left
-    y = BLACKPILERECT.top
-    speed = 1.0
-    # moving the black tile up
-    while y > (YMARGIN - SPACESIZE):
-        y -= int(speed)
-        speed += 0.5
-        drawBoard(board, {'x':x, 'y':y, 'color':BLACK})
-        pygame.display.update()
-        FPSCLOCK.tick()
-    # moving the black tile over
-    y = YMARGIN - SPACESIZE
-    speed = 1.0
-    while x > (XMARGIN + column * SPACESIZE):
-        x -= int(speed)
-        speed += 0.5
-        drawBoard(board, {'x':x, 'y':y, 'color':BLACK})
-        pygame.display.update()
-        FPSCLOCK.tick()
-    # dropping the black tile
-    animateDroppingToken(board, column, BLACK)
-
-'''
-def getComputerMove(board):
-    potentialMoves = getPotentialMoves(board, BLACK, DIFFICULTY)
-    # get the best fitness from the potential moves
-    bestMoveFitness = -1
-    for i in range(BOARDWIDTH):
-        if potentialMoves[i] > bestMoveFitness and isValidMove(board, i):
-            bestMoveFitness = potentialMoves[i]
-    # find all potential moves that have this best fitness
-    bestMoves = []
-    for i in range(len(potentialMoves)):
-        if potentialMoves[i] == bestMoveFitness and isValidMove(board, i):
-            bestMoves.append(i)
-    return random.choice(bestMoves)'''
-
-
-def getPotentialMoves(board, tile, lookAhead):
-    if lookAhead == 0 or isBoardFull(board):
-        return [0] * BOARDWIDTH
-
-    if tile == RED:
-        enemyTile = BLACK
-    else:
-        enemyTile = RED
-
-    # Figure out the best move to make.
-    potentialMoves = [0] * BOARDWIDTH
-    for firstMove in range(BOARDWIDTH):
-        dupeBoard = copy.deepcopy(board)
-        if not isValidMove(dupeBoard, firstMove):
-            continue
-        makeMove(dupeBoard, tile, firstMove)
-        if isWinner(dupeBoard, tile):
-            # a winning move automatically gets a perfect fitness
-            potentialMoves[firstMove] = 1
-            break # don't bother calculating other moves
-        else:
-            # do other player's counter moves and determine best one
-            if isBoardFull(dupeBoard):
-                potentialMoves[firstMove] = 0
-            else:
-                for counterMove in range(BOARDWIDTH):
-                    dupeBoard2 = copy.deepcopy(dupeBoard)
-                    if not isValidMove(dupeBoard2, counterMove):
-                        continue
-                    makeMove(dupeBoard2, enemyTile, counterMove)
-                    if isWinner(dupeBoard2, enemyTile):
-                        # a losing move automatically gets the worst fitness
-                        potentialMoves[firstMove] = -1
-                        break
-                    else:
-                        # do the recursive call to getPotentialMoves()
-                        results = getPotentialMoves(dupeBoard2, tile, lookAhead - 1)
-                        potentialMoves[firstMove] += (sum(results) / BOARDWIDTH) / BOARDWIDTH
-    return potentialMoves
 
 
 def getLowestEmptySpace(board, column):
